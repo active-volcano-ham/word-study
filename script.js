@@ -21,6 +21,8 @@ const STORAGE_KEYS = {
   vocab: "typingGame:vocabBook",
   playTime: "typingGame:playTimeSeconds"
 };
+const PAUSE_BTN_PLAYING = "Pause";
+const PAUSE_BTN_PAUSED = "Resume";
 
 function safeGetStorage(key, fallback = null) {
   try {
@@ -81,7 +83,7 @@ function trackPlayTime() {
     if (playTimeSeconds >= MAX_PLAY_TIME) {
       clearInterval(playTimerId);
       playTimerId = null;
-      alert("눈 보호를 위해 잠시 쉴 시간이에요! 10분 후에 다시 만나요.");
+      alert("Time for an eye-care break! Come back in about 10 minutes.");
       window.location.reload();
     }
   }, 1000);
@@ -471,9 +473,9 @@ function updateTopUI() {
   el.wpmLabel.textContent = `W/Sec: ${settings.wordsPerSecond}`;
   const fall = measureFallingWordSpeed(state.level);
   if (fall.gameHeightPx > 0 && fall.pxPerSec > 0) {
-    el.fallSpeedLabel.textContent = `낙하: ${(fall.durationMs / 1000).toFixed(2)}s · ${fall.pxPerSec.toFixed(1)} px/s`;
+    el.fallSpeedLabel.textContent = `Fall: ${(fall.durationMs / 1000).toFixed(2)}s · ${fall.pxPerSec.toFixed(1)} px/s`;
   } else {
-    el.fallSpeedLabel.textContent = "낙하: —";
+    el.fallSpeedLabel.textContent = "Fall: —";
   }
   const targetText =
     state.running && state.roundTotalWords != null ? state.roundTotalWords : calculateTotalWords(state.level);
@@ -631,12 +633,12 @@ function saveTranslationRecord(record) {
 async function handleStarTranslation(raw) {
   const requestedWord = raw.slice(0, -1).trim();
   if (!requestedWord) {
-    alert("번역하려면 단어 뒤에 * 를 붙여 입력해 주세요. 예: apple*");
+    alert("Add * after the word to translate. Example: apple*");
     return true;
   }
   const target = findFallingWordByInput(requestedWord);
   if (!target) {
-    alert("현재 떨어지는 단어 중에서 찾지 못했어요. 보이는 단어 뒤에 *를 붙여 입력해 주세요.");
+    alert("No matching falling word. Use a word you see on screen, with * at the end.");
     return true;
   }
   const translation = await translateWord(target.word, target.lang);
@@ -698,6 +700,8 @@ function clearFallingWords() {
 
 function finishLevel() {
   state.running = false;
+  state.paused = false;
+  el.pauseBtn.textContent = PAUSE_BTN_PLAYING;
   state.spawnQueue = [];
   state.roundTotalWords = null;
   stopGameTimers();
@@ -710,13 +714,14 @@ function finishLevel() {
     saveLevelForMode(state.mode, Math.max(completed, state.level));
     alert(`Level ${state.level} clear! Accuracy ${accuracy.toFixed(1)}%`);
   } else {
-    alert(`Accuracy ${accuracy.toFixed(1)}%. 80% 미만이라 같은 레벨을 다시 도전해요!`);
+    alert(`Accuracy ${accuracy.toFixed(1)}%. Need 80% or higher — try this level again!`);
   }
 }
 
 function startLevel() {
   state.running = true;
   state.paused = false;
+  el.pauseBtn.textContent = PAUSE_BTN_PLAYING;
   state.remainingTime = LEVEL_DURATION;
   state.wordsSpawned = 0;
   state.correct = 0;
@@ -730,7 +735,7 @@ function startLevel() {
   state.roundTotalWords = state.spawnQueue.length;
   if (!state.roundTotalWords) {
     state.running = false;
-    alert("이 레벨에서 사용할 단어가 없어요. 네트워크와 API 설정을 확인해 주세요.");
+    alert("No words available for this level. Check your network and API settings.");
     updateTopUI();
     return;
   }
@@ -751,7 +756,7 @@ function startLevel() {
 
 function pauseToggle() {
   state.paused = !state.paused;
-  el.pauseBtn.textContent = state.paused ? "Resume" : "Pause";
+  el.pauseBtn.textContent = state.paused ? PAUSE_BTN_PAUSED : PAUSE_BTN_PLAYING;
 }
 
 async function translateWord(word, lang) {
@@ -761,9 +766,9 @@ async function translateWord(word, lang) {
       `https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=${lang}|${target}`
     );
     const data = await res.json();
-    return data?.responseData?.translatedText || "번역 결과 없음";
+    return data?.responseData?.translatedText || "No translation result";
   } catch (err) {
-    return "번역 실패 (네트워크 확인)";
+    return "Translation failed (check network)";
   }
 }
 
@@ -794,7 +799,7 @@ function saveVocab(list) {
 
 function addToVocab() {
   if (!state.selectedTranslation) {
-    alert("먼저 떨어지는 단어를 클릭해서 번역을 확인해 주세요.");
+    alert("Click a falling word first to look up its translation.");
     return;
   }
   saveTranslationRecord(state.selectedTranslation);
@@ -946,6 +951,8 @@ function bindEvents() {
   el.pauseBtn.addEventListener("click", pauseToggle);
   el.resetBtn.addEventListener("click", () => {
     state.running = false;
+    state.paused = false;
+    el.pauseBtn.textContent = PAUSE_BTN_PLAYING;
     stopGameTimers();
     stopPlayTimeTracking();
     clearFallingWords();
@@ -1000,12 +1007,12 @@ async function init() {
   const enCounts = LEVEL_WORD_GROUPS.map((g) => (state.englishByStage[g.id] || []).length).join(", ");
   const koCounts = LEVEL_WORD_GROUPS.map((g) => (state.koreanByStage[g.id] || []).length).join(", ");
   console.info(
-    "[TypingGame] 일상 단어 풀(스테이지별 EN / KO 개수):",
+    "[TypingGame] word pools (EN / KO counts per stage):",
     enCounts,
     "/",
     koCounts,
-    "| 낙하 이론:",
-    fall0.gameHeightPx ? `${(fall0.durationMs / 1000).toFixed(2)}s, ${fall0.pxPerSec.toFixed(1)} px/s (h=${fall0.gameHeightPx}px)` : "영역 높이 대기"
+    "| fall (theory):",
+    fall0.gameHeightPx ? `${(fall0.durationMs / 1000).toFixed(2)}s, ${fall0.pxPerSec.toFixed(1)} px/s (h=${fall0.gameHeightPx}px)` : "waiting for game area height"
   );
   updateTopUI();
   el.typingInput.focus();
@@ -1013,5 +1020,5 @@ async function init() {
 
 init().catch((err) => {
   console.error("Game init failed:", err);
-  alert("게임 초기화 중 오류가 발생했습니다. 브라우저 새로고침 후 다시 시도해 주세요.");
+  alert("Something went wrong while starting the game. Please refresh the page and try again.");
 });

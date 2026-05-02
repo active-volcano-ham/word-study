@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -14,9 +14,9 @@
   <div class="app">
     <header class="top-bar">
       <div class="left-controls">
-        <button id="modeKoBtn" class="small-btn">한글만</button>
-        <button id="modeEnBtn" class="small-btn">영어만</button>
-        <button id="modeMixBtn" class="small-btn">혼합</button>
+        <button id="modeKoBtn" class="small-btn">Korean only</button>
+        <button id="modeEnBtn" class="small-btn">English only</button>
+        <button id="modeMixBtn" class="small-btn">Mixed</button>
         <button id="prevLevelBtn" class="small-btn">◀ Level</button>
         <span id="levelLabel">Level 1</span>
         <button id="nextLevelBtn" class="small-btn">Level ▶</button>
@@ -26,7 +26,7 @@
         <span id="timeLabel">Time: 90s</span>
         <span id="accuracyLabel">Accuracy: 100%</span>
         <span id="wpmLabel">W/Sec: 0.00</span>
-        <span id="fallSpeedLabel">낙하: —</span>
+        <span id="fallSpeedLabel">Fall: —</span>
         <span id="targetLabel">Target: 15</span>
       </div>
       <div class="right-controls">
@@ -46,7 +46,7 @@
       <input
         id="typingInput"
         type="text"
-        placeholder="단어 입력 후 Enter (번역은 예: apple*)"
+        placeholder="Type a word and press Enter (translation: e.g. apple*)"
         autocomplete="off"
       />
       <button id="saveWordBtn" class="small-btn">Save Meaning</button>
