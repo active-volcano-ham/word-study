@@ -39,16 +39,13 @@ function safeSetStorage(key, value) {
   }
 }
 
-/**
- * 단계별 총 단어 수를 계산하는 함수
- * @param {number} level - 현재 게임 레벨
- * @returns {number} 해당 레벨에서 떨어질 총 단어 수
- */
+/** 레벨 1 기준 15개; 2~10레벨마다 +1, 11~30마다 +2, 31~50마다 +3, 51~마다 +4 */
 function calculateTotalWords(level) {
   let total = 15;
   for (let i = 2; i <= level; i++) {
-    if (i <= 10) total += 2;
-    else if (i <= 30) total += 3;
+    if (i <= 10) total += 1;
+    else if (i <= 30) total += 2;
+    else if (i <= 50) total += 3;
     else total += 4;
   }
   return total;
@@ -59,10 +56,12 @@ function calculateTotalWords(level) {
  * @param {number} level - 현재 게임 레벨
  */
 function getGameSettings(level) {
-  const totalWords = calculateTotalWords(level);
+  const totalWords =
+    state.running && state.roundTotalWords != null ? state.roundTotalWords : calculateTotalWords(level);
+  const safeTotal = Math.max(1, totalWords);
   return {
     totalWords,
-    spawnInterval: (LEVEL_DURATION / totalWords) * 1000,
+    spawnInterval: (LEVEL_DURATION / safeTotal) * 1000,
     wordsPerSecond: (totalWords / LEVEL_DURATION).toFixed(2)
   };
 }
@@ -205,6 +204,9 @@ const state = {
   koreanWords: [],
   englishByStage: {},
   koreanByStage: {},
+  /** @type {{ lang: string, word: string }[]} */
+  spawnQueue: [],
+  roundTotalWords: null,
   fallingWords: [],
   spawnTimer: null,
   gameTick: null,
@@ -222,6 +224,7 @@ const el = {
   timeLabel: document.getElementById("timeLabel"),
   accuracyLabel: document.getElementById("accuracyLabel"),
   wpmLabel: document.getElementById("wpmLabel"),
+  fallSpeedLabel: document.getElementById("fallSpeedLabel"),
   targetLabel: document.getElementById("targetLabel"),
   typingInput: document.getElementById("typingInput"),
   startBtn: document.getElementById("startBtn"),
@@ -266,23 +269,36 @@ async function loadEnglishWords() {
   return fallbackEnglishWords;
 }
 
+const KOREAN_API_SEARCH_SEEDS = [
+  "가", "나", "다", "라", "마", "바", "사", "아", "자", "차", "카", "타", "파", "하",
+  "고", "교", "구", "국", "그", "금", "기", "김", "내", "노", "대", "도", "동", "버", "복", "분", "북"
+];
+
 async function loadKoreanWords() {
   if (WOOREEMALSAM_API_KEY === "PUT_YOUR_API_KEY_HERE") {
     return fallbackKoreanWords;
   }
+  const collected = new Set();
   try {
-    const params = new URLSearchParams({
-      key: WOOREEMALSAM_API_KEY,
-      q: "가",
-      req_type: "json",
-      num: "100",
-      start: "1"
-    });
-    const res = await fetch(`${WOOREEMALSAM_API_URL}?${params}`);
-    const data = await res.json();
-    const words = (data?.channel?.item || [])
-      .map((it) => String(it?.word || "").replace(/[^가-힣]/g, ""))
-      .filter(Boolean);
+    for (const q of KOREAN_API_SEARCH_SEEDS) {
+      if (collected.size >= 2500) break;
+      const params = new URLSearchParams({
+        key: WOOREEMALSAM_API_KEY,
+        q,
+        req_type: "json",
+        num: "100",
+        start: "1"
+      });
+      const res = await fetch(`${WOOREEMALSAM_API_URL}?${params}`);
+      if (!res.ok) continue;
+      const data = await res.json();
+      const items = data?.channel?.item || [];
+      for (const it of items) {
+        const w = String(it?.word || "").replace(/[^가-힣]/g, "");
+        if (w) collected.add(w);
+      }
+    }
+    const words = [...collected];
     return words.length ? words : fallbackKoreanWords;
   } catch (err) {
     console.warn("Korean words fetch failed. Using fallback.", err);
@@ -316,28 +332,112 @@ function getMixedWordPool() {
   return { en: safeEn, ko: safeKo };
 }
 
+/** 레벨 그룹에 적힌 영어 일상 단어 전체(소문자). GitHub JSON은 이 집합에 들어가는 항만 추가 일상으로 인정 */
+function mergeAllCuratedEnglishLower() {
+  const s = new Set();
+  for (const g of LEVEL_WORD_GROUPS) {
+    g.english.forEach((w) => s.add(String(w).trim().toLowerCase()));
+  }
+  return s;
+}
+
 function buildStageEnglishPools(jsonWords) {
   const normalized = jsonWords.map((w) => String(w).trim().toLowerCase()).filter((w) => /^[a-z]+$/.test(w));
-  const jsonSet = new Set(normalized);
+  const curatedUnion = mergeAllCuratedEnglishLower();
   const result = {};
   for (const group of LEVEL_WORD_GROUPS) {
-    const allowed = group.english.map((w) => w.toLowerCase());
-    const matched = allowed.filter((w) => jsonSet.has(w));
-    result[group.id] = matched.length ? matched : allowed;
+    const core = group.english.map((w) => w.toLowerCase());
+    const fromJsonDaily = filterWordsByAgeGroup(normalized, group.id, true).filter((w) => curatedUnion.has(w));
+    const crossTier = [];
+    for (const g of LEVEL_WORD_GROUPS) {
+      for (const w of g.english) {
+        const lw = String(w).trim().toLowerCase();
+        if (filterWordsByAgeGroup([lw], group.id, true).length) crossTier.push(lw);
+      }
+    }
+    result[group.id] = [...new Set([...core, ...crossTier, ...fromJsonDaily])];
   }
   return result;
 }
 
 function buildStageKoreanPools(apiWords) {
   const normalized = apiWords.map((w) => String(w).trim()).filter((w) => /^[가-힣]+$/.test(w));
-  const apiSet = new Set(normalized);
   const result = {};
   for (const group of LEVEL_WORD_GROUPS) {
-    const allowed = group.korean;
-    const matched = allowed.filter((w) => apiSet.has(w));
-    result[group.id] = matched.length ? matched : allowed;
+    const core = [...group.korean];
+    const fromApi = filterWordsByAgeGroup(normalized, group.id, false);
+    result[group.id] = [...new Set([...core, ...fromApi])];
   }
   return result;
+}
+
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/**
+ * 한 라운드에 떨어질 단어 순서. 단어 문자열 기준 중복 없음. 혼합 모드는 가능한 한 영·한 모두 포함.
+ */
+function buildRoundSpawnQueue(mode, enPool, koPool, desiredTotal) {
+  const enU = [...new Set(enPool.map((w) => String(w).trim().toLowerCase()).filter((w) => /^[a-z]+$/.test(w)))];
+  const koU = [...new Set(koPool.map((w) => String(w).trim()).filter((w) => /^[가-힣]+$/.test(w)))];
+  const enList = shuffleArray(enU);
+  const koList = shuffleArray(koU);
+
+  if (mode === GAME_MODES.EN) {
+    return enList.slice(0, Math.min(desiredTotal, enList.length)).map((word) => ({ lang: "en", word }));
+  }
+  if (mode === GAME_MODES.KO) {
+    return koList.slice(0, Math.min(desiredTotal, koList.length)).map((word) => ({ lang: "ko", word }));
+  }
+
+  if (!enList.length && !koList.length) return [];
+  if (!enList.length) {
+    return koList.slice(0, Math.min(desiredTotal, koList.length)).map((word) => ({ lang: "ko", word }));
+  }
+  if (!koList.length) {
+    return enList.slice(0, Math.min(desiredTotal, enList.length)).map((word) => ({ lang: "en", word }));
+  }
+
+  let nEn = Math.ceil(desiredTotal / 2);
+  let nKo = desiredTotal - nEn;
+  let takeEn = Math.min(nEn, enList.length);
+  let takeKo = Math.min(nKo, koList.length);
+  let need = desiredTotal - takeEn - takeKo;
+  if (need > 0) {
+    const moreEn = Math.min(need, enList.length - takeEn);
+    takeEn += moreEn;
+    need -= moreEn;
+  }
+  if (need > 0) {
+    takeKo += Math.min(need, koList.length - takeKo);
+  }
+
+  const enSlice = enList.slice(0, takeEn);
+  const koSlice = koList.slice(0, takeKo);
+  const out = [
+    ...enSlice.map((word) => ({ lang: "en", word })),
+    ...koSlice.map((word) => ({ lang: "ko", word }))
+  ];
+
+  if (desiredTotal >= 2 && enList.length && koList.length) {
+    const hasEn = out.some((x) => x.lang === "en");
+    const hasKo = out.some((x) => x.lang === "ko");
+    if (!hasEn) {
+      const i = out.findIndex((x) => x.lang === "ko");
+      if (i >= 0) out[i] = { lang: "en", word: enList[0] };
+    } else if (!hasKo) {
+      const i = out.findIndex((x) => x.lang === "en");
+      if (i >= 0) out[i] = { lang: "ko", word: koList[0] };
+    }
+  }
+
+  return shuffleArray(out);
 }
 
 function getFallingDurationByLevel(level) {
@@ -345,6 +445,18 @@ function getFallingDurationByLevel(level) {
   const minimum = 1700;
   const scale = 1 + (level - 1) * 0.022;
   return Math.max(minimum, base / scale);
+}
+
+/**
+ * 현재 레벨·게임 영역 높이 기준 낙하 속도(이론값). gameLoop의 speed = h / fallDuration 과 동일.
+ * @returns {{ durationMs: number, pxPerSec: number, gameHeightPx: number }}
+ */
+function measureFallingWordSpeed(level) {
+  const gameHeightPx = el.gameArea ? el.gameArea.clientHeight : 0;
+  const durationMs = getFallingDurationByLevel(level);
+  const sec = durationMs / 1000;
+  const pxPerSec = gameHeightPx > 0 && sec > 0 ? gameHeightPx / sec : 0;
+  return { durationMs, pxPerSec, gameHeightPx };
 }
 
 function updateTopUI() {
@@ -357,7 +469,15 @@ function updateTopUI() {
   el.timeLabel.textContent = `Time: ${state.remainingTime}s`;
   el.accuracyLabel.textContent = `Accuracy: ${accuracy}%`;
   el.wpmLabel.textContent = `W/Sec: ${settings.wordsPerSecond}`;
-  el.targetLabel.textContent = `Target: ${settings.totalWords}`;
+  const fall = measureFallingWordSpeed(state.level);
+  if (fall.gameHeightPx > 0 && fall.pxPerSec > 0) {
+    el.fallSpeedLabel.textContent = `낙하: ${(fall.durationMs / 1000).toFixed(2)}s · ${fall.pxPerSec.toFixed(1)} px/s`;
+  } else {
+    el.fallSpeedLabel.textContent = "낙하: —";
+  }
+  const targetText =
+    state.running && state.roundTotalWords != null ? state.roundTotalWords : calculateTotalWords(state.level);
+  el.targetLabel.textContent = `Target: ${targetText}`;
   applyLevelTheme();
   updateModeButtonActiveState();
 }
@@ -439,15 +559,11 @@ function spawnWord() {
   const settings = getGameSettings(state.level);
   if (!state.running || state.paused || state.wordsSpawned >= settings.totalWords) return;
 
-  const pool = getMixedWordPool();
-  let useEnglish = Math.random() > 0.5;
-  if (state.mode === GAME_MODES.KO) useEnglish = false;
-  if (state.mode === GAME_MODES.EN) useEnglish = true;
-  const source = useEnglish ? pool.en : pool.ko;
-  const picked = source[Math.floor(Math.random() * source.length)];
-  if (!picked) return;
+  const next = state.spawnQueue[state.wordsSpawned];
+  if (!next) return;
 
-  const lang = useEnglish ? "en" : "ko";
+  const picked = next.word;
+  const lang = next.lang;
   const node = createWordElement(picked, lang);
   el.gameArea.appendChild(node);
 
@@ -582,6 +698,8 @@ function clearFallingWords() {
 
 function finishLevel() {
   state.running = false;
+  state.spawnQueue = [];
+  state.roundTotalWords = null;
   stopGameTimers();
   stopPlayTimeTracking();
   const totalAttempts = state.correct + state.wrong + state.misses;
@@ -605,6 +723,18 @@ function startLevel() {
   state.wrong = 0;
   state.misses = 0;
   clearFallingWords();
+
+  const desiredTotal = calculateTotalWords(state.level);
+  const pool = getMixedWordPool();
+  state.spawnQueue = buildRoundSpawnQueue(state.mode, pool.en, pool.ko, desiredTotal);
+  state.roundTotalWords = state.spawnQueue.length;
+  if (!state.roundTotalWords) {
+    state.running = false;
+    alert("이 레벨에서 사용할 단어가 없어요. 네트워크와 API 설정을 확인해 주세요.");
+    updateTopUI();
+    return;
+  }
+
   updateTopUI();
   trackPlayTime();
 
@@ -819,6 +949,8 @@ function bindEvents() {
     stopGameTimers();
     stopPlayTimeTracking();
     clearFallingWords();
+    state.spawnQueue = [];
+    state.roundTotalWords = null;
     state.remainingTime = LEVEL_DURATION;
     state.wordsSpawned = 0;
     state.correct = 0;
@@ -864,7 +996,18 @@ async function init() {
   if (!state.koreanWords.length) state.koreanWords = [...fallbackKoreanWords];
   state.englishByStage = buildStageEnglishPools(state.englishWords);
   state.koreanByStage = buildStageKoreanPools(state.koreanWords);
-  startLevel();
+  const fall0 = measureFallingWordSpeed(state.level);
+  const enCounts = LEVEL_WORD_GROUPS.map((g) => (state.englishByStage[g.id] || []).length).join(", ");
+  const koCounts = LEVEL_WORD_GROUPS.map((g) => (state.koreanByStage[g.id] || []).length).join(", ");
+  console.info(
+    "[TypingGame] 일상 단어 풀(스테이지별 EN / KO 개수):",
+    enCounts,
+    "/",
+    koCounts,
+    "| 낙하 이론:",
+    fall0.gameHeightPx ? `${(fall0.durationMs / 1000).toFixed(2)}s, ${fall0.pxPerSec.toFixed(1)} px/s (h=${fall0.gameHeightPx}px)` : "영역 높이 대기"
+  );
+  updateTopUI();
   el.typingInput.focus();
 }
 
