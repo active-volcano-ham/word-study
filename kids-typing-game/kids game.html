@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Kids Typing Rain Game</title>
+  <meta name="theme-color" content="#4f46e5" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="top-bar">
+      <div class="left-controls">
+        <button id="modeKoBtn" class="small-btn">Korean only</button>
+        <button id="modeEnBtn" class="small-btn">English only</button>
+        <button id="modeMixBtn" class="small-btn">Mixed</button>
+        <button id="prevLevelBtn" class="small-btn">◀ Level</button>
+        <span id="levelLabel">Level 1</span>
+        <button id="nextLevelBtn" class="small-btn">Level ▶</button>
+      </div>
+      <div class="center-stats">
+        <span id="modeLabel">Mode: MIX</span>
+        <span id="timeLabel">Time: 90s</span>
+        <span id="accuracyLabel">Accuracy: 100%</span>
+        <span id="wpmLabel">W/Sec: 0.00</span>
+        <span id="fallSpeedLabel">Fall: —</span>
+        <span id="targetLabel">Target: 15</span>
+      </div>
+      <div class="right-controls">
+        <button id="startBtn" class="primary-btn">Start</button>
+        <button id="pauseBtn" class="small-btn">Pause</button>
+        <button id="resetBtn" class="small-btn">Reset</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="gameArea" class="game-area" aria-label="Typing game area"></section>
+      <canvas id="fxCanvas"></canvas>
+      <div id="translatePopup" class="translate-popup hidden"></div>
+    </main>
+
+    <footer class="bottom-panel">
+      <input
+        id="typingInput"
+        type="text"
+        placeholder="Type a word and press Enter (translation: e.g. apple*)"
+        autocomplete="off"
+      />
+      <button id="saveWordBtn" class="small-btn">Save Meaning</button>
+      <button id="showVocabBtn" class="small-btn">Vocabulary Book</button>
+    </footer>
+  </div>
+
+  <aside id="vocabModal" class="modal hidden">
+    <div class="modal-content">
+      <h2>Vocabulary Book</h2>
+      <ul id="vocabList"></ul>
+      <button id="clearVocabBtn" class="small-btn danger">Clear</button>
+      <button id="closeVocabBtn" class="small-btn">Close</button>
+    </div>
+  </aside>
+
+  <script src="script.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js").catch((error) => {
+          console.error("Service worker registration failed:", error);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
