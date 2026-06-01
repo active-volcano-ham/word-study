@@ -18,6 +18,11 @@
       --panel-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
       --header-h: 58px;
       --question-top: 72px;
+
+      /* ▼ 글씨 크기 조절: 숫자만 바꾸면 됩니다 (rem ≈ 16px 기준) */
+      --font-question: 1.85rem;      /* 상단 문제 글씨 (.question) */
+      --font-balloon: 1.10rem;       /* 풍선 영어 (.balloon) */
+      --font-balloon-ko: 1.10rem;     /* 풍선 한국어 (.balloon-ko) */
     }
     *{ box-sizing:border-box; }
     html,body{
@@ -48,7 +53,7 @@
     .brand{
       font-family: "Sour Gummy", "Jua", sans-serif;
       font-weight:700;
-      font-size:1.05rem;
+      font-size:2.00rem;
       color:#08324a;
     }
     .controls{
@@ -56,7 +61,7 @@
       flex-wrap:wrap;
       gap:8px;
       align-items:center;
-      font-size:0.92rem;
+      font-size:2.00rem;
       font-weight:600;
     }
     .controls label{ font-weight:600; }
@@ -66,7 +71,7 @@
       padding:7px 12px;
       border-radius:999px;
       font-family:inherit;
-      font-size:0.92rem;
+      font-size:2.00rem;
       font-weight:600;
       cursor:pointer;
     }
@@ -88,7 +93,7 @@
       border-radius:999px;
       padding:8px 14px;
       font-family:inherit;
-      font-size:0.92rem;
+      font-size:2.00rem;
       font-weight:700;
       cursor:pointer;
       box-shadow: 0 4px 10px rgba(0,0,0,0.06);
@@ -107,7 +112,7 @@
       margin-left:auto;
       font-family: "Sour Gummy", sans-serif;
       font-weight:700;
-      font-size:0.95rem;
+      font-size:2.00rem;
       padding:6px 12px;
       border-radius:999px;
       background:#fff;
@@ -124,7 +129,7 @@
       padding:12px 22px;
       text-align:center;
       font-family: "Jua", "Sour Gummy", "Apple SD Gothic Neo", sans-serif;
-      font-size:1.35rem;
+      font-size:var(--font-question);
       font-weight:700;
       line-height:1.35;
       color:#2d3748;
@@ -141,11 +146,83 @@
       bottom:12px;
       overflow:hidden;
       border-radius:24px;
-      background-color:#dff3ff;
+      background-color:#b8e4ff;
       background-image:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.18)),
-        linear-gradient(180deg, #c7f0ff, #f9fbff 52%, #ffeccc);
+        radial-gradient(ellipse 90% 55% at 50% 100%, rgba(255, 236, 179, 0.55), transparent 70%),
+        linear-gradient(180deg, #9ed8ff 0%, #c8ebff 38%, #e8f6ff 72%, #fff8e8 100%);
       box-shadow: inset 0 0 0 2px #ffffff70, 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+    .sky-scene{
+      position:absolute;
+      inset:0;
+      z-index:0;
+      pointer-events:none;
+      overflow:hidden;
+    }
+    .rainbow-svg{
+      position:absolute;
+      top:2%;
+      left:50%;
+      width:min(88%, 440px);
+      height:auto;
+      transform:translateX(-50%);
+      opacity:0.72;
+    }
+    .cloud{
+      position:absolute;
+      background:rgba(255, 255, 255, 0.94);
+      border-radius:999px;
+      filter:drop-shadow(0 8px 14px rgba(120, 170, 220, 0.2));
+      animation:cloudDrift linear infinite;
+    }
+    .cloud::before,
+    .cloud::after{
+      content:"";
+      position:absolute;
+      background:inherit;
+      border-radius:50%;
+    }
+    .cloud-1{
+      width:110px; height:38px;
+      top:18%; left:-8%;
+      animation-duration:48s;
+    }
+    .cloud-1::before{ width:48px; height:48px; top:-22px; left:14px; }
+    .cloud-1::after{ width:36px; height:36px; top:-14px; right:18px; }
+    .cloud-2{
+      width:92px; height:32px;
+      top:8%; right:6%;
+      animation-duration:56s;
+      animation-direction:reverse;
+    }
+    .cloud-2::before{ width:40px; height:40px; top:-18px; left:10px; }
+    .cloud-2::after{ width:30px; height:30px; top:-12px; right:12px; }
+    .cloud-3{
+      width:130px; height:42px;
+      top:42%; right:-6%;
+      animation-duration:62s;
+    }
+    .cloud-3::before{ width:54px; height:54px; top:-26px; left:18px; }
+    .cloud-3::after{ width:40px; height:40px; top:-18px; right:22px; }
+    .cloud-4{
+      width:100px; height:34px;
+      top:55%; left:4%;
+      animation-duration:52s;
+      animation-direction:reverse;
+    }
+    .cloud-4::before{ width:44px; height:44px; top:-20px; left:12px; }
+    .cloud-4::after{ width:32px; height:32px; top:-14px; right:14px; }
+    .cloud-5{
+      width:76px; height:28px;
+      top:72%; left:38%;
+      opacity:0.88;
+      animation-duration:44s;
+    }
+    .cloud-5::before{ width:34px; height:34px; top:-16px; left:8px; }
+    .cloud-5::after{ width:26px; height:26px; top:-10px; right:10px; }
+    @keyframes cloudDrift{
+      from{ transform:translateX(0); }
+      to{ transform:translateX(28px); }
     }
     .balloon{
       --balloon-w: 118px;
@@ -162,10 +239,11 @@
       justify-content:center;
       text-align:center;
       font-family: "Sour Gummy", "Segoe UI", sans-serif;
-      font-size:0.95rem;
+      font-size:var(--font-balloon);
       font-weight:700;
       line-height:1.25;
       color:#2d3748;
+      z-index:2;
       border:2px solid rgba(255, 255, 255, 0.55);
       border-radius:50% 50% 48% 48% / 58% 58% 42% 42%;
       cursor:pointer;
@@ -178,7 +256,7 @@
     }
     .balloon.balloon-ko{
       font-family: "Jua", "Apple SD Gothic Neo", sans-serif;
-      font-size:0.9rem;
+      font-size:var(--font-balloon-ko);
     }
     .balloon::before{
       content:"";
@@ -278,7 +356,12 @@
       :root{ --question-top: 118px; }
       header{ top:8px; left:8px; right:8px; }
       .brand{ font-size:0.98rem; }
-      .question{ font-size:1.15rem; padding:10px 16px; }
+      :root{
+        --font-question: 1.15rem;
+        --font-balloon: 0.85rem;
+        --font-balloon-ko: 0.82rem;
+      }
+      .question{ padding:10px 16px; }
       .game-area{
         left:8px;
         right:8px;
@@ -288,7 +371,6 @@
       .balloon{
         --balloon-w: 104px;
         --balloon-h: 138px;
-        font-size:0.85rem;
       }
     }
   </style>
@@ -318,7 +400,23 @@
 
   <div class="question" id="question">상단에서 옵션을 선택하고 시작을 누르세요.</div>
 
-  <div class="game-area" id="gameArea" aria-live="polite"></div>
+  <div class="game-area" id="gameArea" aria-live="polite">
+    <div class="sky-scene" aria-hidden="true">
+      <svg class="rainbow-svg" viewBox="0 0 440 130" xmlns="http://www.w3.org/2000/svg" role="presentation">
+        <path d="M 30 118 A 190 95 0 0 1 410 118" fill="none" stroke="#ff9eb5" stroke-width="16" stroke-linecap="round" opacity="0.75"/>
+        <path d="M 48 118 A 172 88 0 0 1 392 118" fill="none" stroke="#ffc48a" stroke-width="14" stroke-linecap="round" opacity="0.75"/>
+        <path d="M 66 118 A 154 81 0 0 1 374 118" fill="none" stroke="#ffe98a" stroke-width="13" stroke-linecap="round" opacity="0.75"/>
+        <path d="M 84 118 A 136 74 0 0 1 356 118" fill="none" stroke="#9be7b8" stroke-width="12" stroke-linecap="round" opacity="0.75"/>
+        <path d="M 102 118 A 118 67 0 0 1 338 118" fill="none" stroke="#8ec8ff" stroke-width="11" stroke-linecap="round" opacity="0.75"/>
+        <path d="M 120 118 A 100 60 0 0 1 320 118" fill="none" stroke="#c4a8ff" stroke-width="10" stroke-linecap="round" opacity="0.72"/>
+      </svg>
+      <div class="cloud cloud-1"></div>
+      <div class="cloud cloud-2"></div>
+      <div class="cloud cloud-3"></div>
+      <div class="cloud cloud-4"></div>
+      <div class="cloud cloud-5"></div>
+    </div>
+  </div>
 
   <div class="toast" id="toast"></div>
 
