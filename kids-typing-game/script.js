@@ -227,7 +227,7 @@ const el = {
   accuracyLabel: document.getElementById("accuracyLabel"),
   wpmLabel: document.getElementById("wpmLabel"),
   fallSpeedLabel: document.getElementById("fallSpeedLabel"),
-  targetLabel: document.getElementById("targetLabel"),
+  exitBtn: document.getElementById("exitBtn"),
   typingInput: document.getElementById("typingInput"),
   startBtn: document.getElementById("startBtn"),
   pauseBtn: document.getElementById("pauseBtn"),
@@ -477,9 +477,6 @@ function updateTopUI() {
   } else {
     el.fallSpeedLabel.textContent = "Fall: —";
   }
-  const targetText =
-    state.running && state.roundTotalWords != null ? state.roundTotalWords : calculateTotalWords(state.level);
-  el.targetLabel.textContent = `Target: ${targetText}`;
   applyLevelTheme();
   updateModeButtonActiveState();
 }
@@ -973,6 +970,9 @@ function bindEvents() {
     state.wrong = 0;
     state.misses = 0;
     updateTopUI();
+  });
+  el.exitBtn.addEventListener("click", () => {
+    window.location.href = "../index.html";
   });
   el.prevLevelBtn.addEventListener("click", () => {
     state.level = clampLevel(state.level - 1);
