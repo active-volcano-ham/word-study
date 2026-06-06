@@ -27,7 +27,6 @@
       user-select: none;
       -webkit-user-drag: none;
     }
-    /* 원형 버튼 클릭 영역 (이미지 위 좌·우 원) */
     .circle-link {
       position: absolute;
       top: 50%;
@@ -70,10 +69,9 @@
 </head>
 <body>
   <main class="landing">
+    <!-- ▼ width/height 고정값 제거 → 모바일 반응형 -->
     <img
       src="AI Image-main.png"
-      width="1400"
-      height="700"
       alt="Word Study — Kids Typing Game and TOEIC TOEFL Quiz"
     />
     <a
@@ -91,5 +89,16 @@
       <span class="sr-only">TOEIC / TOEFL Quiz</span>
     </a>
   </main>
+
+  <!-- ▼ Service Worker 등록 (PWA용) -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('SW registered:', reg.scope))
+          .catch(err => console.error('SW error:', err));
+      });
+    }
+  </script>
 </body>
 </html>

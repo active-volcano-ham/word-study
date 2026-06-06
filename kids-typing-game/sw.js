@@ -1,9 +1,12 @@
-const CACHE_NAME = "kids-typing-game-v1";
+const CACHE_NAME = "word-study-v1";
 const ASSETS_TO_CACHE = [
-  "/",
-  "/index.html",
-  "/style.css",
-  "/script.js",
+  "/word-study/",
+  "/word-study/index.html",
+  "/word-study/kids-typing-game/style.css",
+  "/word-study/kids-typing-game/script.js",
+  "/word-study/AI%20Image-main.png",
+  "/word-study/All%20of%20the%20words%20Icon%20192.png",
+  "/word-study/All%20of%20the%20words%20Icon%20512.png"
 ];
 
 self.addEventListener("install", (event) => {
@@ -47,7 +50,7 @@ self.addEventListener("fetch", (event) => {
             .then((cache) => cache.put(event.request, responseClone));
           return networkResponse;
         })
-        .catch(() => caches.match("/index.html"));
+        .catch(() => caches.match("/word-study/index.html"));
     })
   );
 });
