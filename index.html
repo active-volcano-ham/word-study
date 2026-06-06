@@ -65,6 +65,19 @@
       white-space: nowrap;
       border: 0;
     }
+    /* 세로 모드일 때 자동으로 가로 회전 */
+@media (orientation: portrait) {
+  body {
+    transform: rotate(90deg);
+    transform-origin: left top;
+    width: 100vh;
+    height: 100vw;
+    overflow-x: hidden;
+    position: absolute;
+    top: 100%;
+    left: 0;
+  }
+}
   </style>
 </head>
 <body>
