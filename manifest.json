@@ -1,7 +1,8 @@
 {
     "name": "Word Study",
     "short_name": "WordStudy",
-    "start_url": "/index.html",
+    "start_url": "/word-study/",
+    "scope": "/word-study/",
     "display": "standalone",
     "background_color": "#dff7ff",
     "theme_color": "#7fd6ff",
