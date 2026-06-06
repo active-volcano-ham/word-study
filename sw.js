@@ -2,6 +2,8 @@ const CACHE_NAME = "word-study-v1";
 const ASSETS_TO_CACHE = [
   "/word-study/",
   "/word-study/index.html",
+  "/word-study/manifest.json",
+  "/word-study/kids-typing-game/kids%20game.html",
   "/word-study/kids-typing-game/style.css",
   "/word-study/kids-typing-game/script.js",
   "/word-study/AI%20Image-main.png",
